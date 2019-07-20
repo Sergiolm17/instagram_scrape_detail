@@ -21,7 +21,8 @@
     "firebase-functions": "^3.0.0",
     "instagram-profile-picture": "^1.0.5",
     "instagram-scraping": "^1.0.2",
-    "instory": "^1.0.2"
+    "instory": "^1.0.2",
+    "lodash": "^4.17.15"
   },
   "devDependencies": {
     "tslint": "^5.12.0",

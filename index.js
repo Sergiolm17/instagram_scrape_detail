@@ -1,6 +1,5 @@
 var express = require("express");
 var app = express();
-var pretty = require("express-prettify");
 var ig = require("instagram-scraping");
 const bud = require("basic-instagram-user-details");
 const instory = require("instory");
@@ -50,7 +49,6 @@ app.get("/history/:tagId", async (req, res) => {
     console.log(error);
   }
 });
-var metal = require("metal-name");
 
 app.get("/band", async (req, res) => {
   try {
