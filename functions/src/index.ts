@@ -9,7 +9,7 @@ const { BigQuery } = require("@google-cloud/bigquery");
 const bigquery = new BigQuery();
 const dataset = "scrapinstav1";
 const bq = bigquery.dataset(dataset);
-//const translate = require("translate-google");
+const translate = require("translate-google");
 /*
 const bud = require("basic-instagram-user-details");
 const instory = require("instory");
@@ -26,7 +26,25 @@ declare const Date: any;
 const language = require("@google-cloud/language");
 const client = new language.LanguageServiceClient();
 
-export const helloWorld = functions.https.onRequest(async (req, res) => {
+const vision = require("@google-cloud/vision");
+const clientimage = new vision.ImageAnnotatorClient();
+
+export const ImagetoText = functions.https.onRequest(async (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "POST");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  const record: any = JSON.parse(req.body);
+  console.log(record);
+
+  const [result] = await clientimage.textDetection(record.content);
+  const detections = result.textAnnotations;
+  console.log("Text:");
+  detections.forEach((text: any) => console.log(text));
+
+  return res.json(detections);
+});
+
+export const analyzeSyntax = functions.https.onRequest(async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "POST");
   res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -130,65 +148,81 @@ export const taskRunner = functions
 
     return await Promise.all(jobs);
   });
-/*
+
 export const translateJob = functions
   .runWith({ memory: "2GB" })
   .pubsub.schedule("* * * * *")
   .timeZone("America/Lima")
   .onRun(async () => {
-    const jobs: any = [];
-
-    const query = `SELECT string_field_0
-  FROM \`scrapbinder.newlearn.quotes\`
+    const limit = 5;
+    const dataarray: any = [
+      {
+        table: `scrapbinder.newlearn.english_dic`,
+        to: `english`,
+        from: `translate`,
+        idiom: `es`
+      },
+      {
+        table: `scrapbinder.newlearn.translate_dic`,
+        to: `translate`,
+        from: `english`,
+        idiom: `en`
+      }
+    ];
+    //const jobs: any = [];
+    return dataarray.forEach(async (data: any) => {
+      const query = `SELECT ${data.to}
+  FROM \`${data.table}\`
   WHERE
-  translate is null
-  LIMIT 5`;
+  ${data.from} is null
+  LIMIT ${limit} `;
 
-    // For all options, see https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/query
-    const options = {
-      query,
-      // Location must match that of the dataset(s) referenced in the query.
-      location: "US"
-    };
-
-    // Run the query as a job
-    const [job] = await bigquery.createQueryJob(options);
-    console.log(`Job ${job.id} started.`);
-
-    // Wait for the query to finish
-    const [rows] = await job.getQueryResults();
-
-    // Print the results
-    const quores: any = [];
-    if(!rows.length){
-      return false
-    }
-    rows.forEach((row: any) => {
-      return quores.push(row.string_field_0);
-    });
-    const translatequotes = await translate(quores, { to: "es" });
-
-    translatequotes.forEach((quotetranslate: any, index: any) => {
-      const querytranslate = ` 
-      UPDATE \`scrapbinder.newlearn.quotes\`
-      SET translate = "${quotetranslate}"
-      WHERE
-      string_field_0 = "${quores[index]}"
-      `;
-      const optionstranslate = {
-        query: querytranslate,
+      // For all options, see https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/query
+      const options = {
+        query,
         // Location must match that of the dataset(s) referenced in the query.
         location: "US"
       };
 
       // Run the query as a job
+      const [job] = await bigquery.createQueryJob(options);
+      console.log(`Job ${job.id} started.`);
 
-      jobs.push(bigquery.createQueryJob(optionstranslate));
+      // Wait for the query to finish
+      const [rows] = await job.getQueryResults();
+
+      // Print the results
+      const quores: any = [];
+      if (!rows.length) {
+        return false;
+      }
+      rows.forEach((row: any) => {
+        return quores.push(row[data.to]);
+      });
+      const translatequotes = await translate(quores, { to: data.idiom });
+
+      for (let index = 0; index < translatequotes.length; index++) {
+        console.log(quores[index], "=>", translatequotes[index]);
+      }
+      return translatequotes.forEach(
+        async (quotetranslate: any, index: any) => {
+          const querytranslate = ` 
+      UPDATE \`${data.table}\`
+      SET ${data.from} = "${quotetranslate}"
+      WHERE
+      ${data.to} = "${quores[index]}"
+      `;
+          const optionstranslate = {
+            query: querytranslate,
+            // Location must match that of the dataset(s) referenced in the query.
+            location: "US"
+          };
+
+          // Run the query as a job
+          return await bigquery.createQueryJob(optionstranslate);
+          //jobs.push();
+        }
+      );
     });
-
-    console.log(quores[0]);
-    console.log(translatequotes[0]);
-
-    return await Promise.all(jobs);
+    //await Promise.all(jobs);
   });
-*/
